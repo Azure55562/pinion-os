@@ -259,11 +259,35 @@ export function getToolDefinitions(): ToolDef[] {
                 required: ["action"],
             },
         },
+        {
+            name: "pinion_unlimited",
+            description:
+                "Purchase unlimited access to all Pinion OS skills for a one-time payment of `$100 USDC. Returns an API key that bypasses x402 on all future calls.",
+            inputSchema: {
+                type: "object",
+                properties: {},
+            },
+        },
+        {
+            name: "pinion_unlimited_verify",
+            description:
+                "Check if an unlimited API key is valid. Returns the associated address and activation date. No x402 cost.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    key: {
+                        type: "string",
+                        description: "The unlimited API key (pk_...) to verify",
+                    },
+                },
+                required: ["key"],
+            },
+        },
     ];
 }
 
 // tools that do not require a wallet
-const FREE_TOOLS = ["pinion_setup", "pinion_spend_limit"];
+const FREE_TOOLS = ["pinion_setup", "pinion_spend_limit", "pinion_unlimited_verify"];
 
 export async function handleToolCall(
     getClient: () => PinionClient | null,
@@ -295,6 +319,26 @@ export async function handleToolCall(
             return handleSpendLimit(args);
         }
 
+        // unlimited verify (no wallet needed, but needs client for baseUrl)
+        if (toolName === "pinion_unlimited_verify") {
+            const cl = getClient();
+            if (!cl) {
+                return {
+                    content: [{ type: "text", text: "wallet not configured. Use pinion_setup first." }],
+                };
+            }
+            try {
+                const result = await cl.skills.unlimitedVerify(args.key);
+                return {
+                    content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+                };
+            } catch (err: any) {
+                return {
+                    content: [{ type: "text", text: `error: ${err.message}` }],
+                };
+            }
+        }
+
         // all remaining tools require client
         if (!client) {
             return {
@@ -310,10 +354,11 @@ export async function handleToolCall(
         const paidTools = [
             "pinion_balance", "pinion_tx", "pinion_price",
             "pinion_wallet", "pinion_chat", "pinion_send",
-            "pinion_trade", "pinion_fund", "pinion_broadcast",
+            "pinion_trade", "pinion_fund", "pinion_broadcast", "pinion_unlimited",
         ];
 
-        if (paidTools.includes(toolName) && !spendTracker.canSpend(COST_ATOMIC)) {
+        const costForTool = toolName === "pinion_unlimited" ? "100000000" : COST_ATOMIC;
+        if (paidTools.includes(toolName) && !spendTracker.canSpend(costForTool)) {
             const status = spendTracker.getStatus();
             return {
                 content: [{
@@ -371,6 +416,9 @@ export async function handleToolCall(
                     }],
                 };
             }
+            case "pinion_unlimited":
+                result = await client.skills.unlimited();
+                break;
             default:
                 return {
                     content: [{

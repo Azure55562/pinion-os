@@ -121,6 +121,18 @@ console.log(trade.data);  // { swap: { to, data, value }, approve?: {...} }
 // check funding status for a wallet
 const fund = await pinion.skills.fund("0x1234...");
 console.log(fund.data);  // { balances, funding: { steps, ... } }
+
+// sign and broadcast a transaction
+const txResult = await pinion.skills.broadcast(send.data.tx);
+console.log(txResult.data);  // { hash: "0x..." }
+
+// purchase unlimited access ($100 USDC one-time)
+const unlimited = await pinion.skills.unlimited();
+console.log(unlimited.data);  // { apiKey: "pk_...", address, plan: "unlimited" }
+
+// once you have an API key, set it to skip x402 payments
+pinion.setApiKey(unlimited.data.apiKey);
+// all subsequent calls are free
 ```
 
 Server-side skills cost $0.01 USDC on Base via x402. Payment is handled automatically.
@@ -177,9 +189,9 @@ Supports both x402 v1 (`x402-express`) and v2 (`@x402/express`, Stripe) servers 
 
 ## MCP Plugin Setup
 
-The plugin exposes ten tools to any MCP-compatible host: `pinion_balance`,
+The plugin exposes twelve tools to any MCP-compatible host: `pinion_balance`,
 `pinion_tx`, `pinion_price`, `pinion_wallet`, `pinion_chat`, `pinion_send`,
-`pinion_trade`, `pinion_fund`, `pinion_pay_service`, `pinion_spend_limit`.
+`pinion_trade`, `pinion_fund`, `pinion_pay_service`, `pinion_spend_limit`, `pinion_unlimited`, `pinion_unlimited_verify`.
 
 ### Claude Desktop
 
@@ -222,8 +234,7 @@ Set the env var when prompted, or export before launching:
 export PINION_PRIVATE_KEY=0xYOUR_KEY
 ```
 
-After installing, Claude can use all ten pinion tools: balance, tx, price,
-wallet, chat, send, trade, fund, pay_service, spend_limit.
+After installing, Claude can use all twelve pinion tools: balance, tx, price, wallet, chat, send, trade, fund, pay_service, spend_limit, unlimited, unlimited_verify.
 
 Alternative (MCP-only, without plugin features):
 
@@ -271,6 +282,8 @@ The plugin communicates over stdio using the standard MCP protocol.
 | send | `skills.send(to, amt, token)` | POST /send | $0.01 | Unsigned transfer tx |
 | trade | `skills.trade(src, dst, amt)` | POST /trade | $0.01 | Unsigned swap tx (1inch) |
 | fund | `skills.fund(addr)` | GET /fund/:address | $0.01 | Balance + deposit info |
+| broadcast | `skills.broadcast(tx)` | POST /broadcast | $0.01 | Signed + broadcast tx hash |
+| unlimited | `skills.unlimited()` | POST /unlimited | $100.00 | API key for unlimited access |
 
 ### Client-side (SDK/MCP plugin only)
 
@@ -278,6 +291,7 @@ The plugin communicates over stdio using the standard MCP protocol.
 |-------|---------------|-------------|
 | pay-for-service | `payX402Service(wallet, url)` / `pinion_pay_service` | Call any x402 endpoint on the internet |
 | spend-limit | `pinion_spend_limit` (MCP only) | Per-session USDC budget tracking |
+| unlimited-verify | `skills.unlimitedVerify(key)` / `pinion_unlimited_verify` | Check if an unlimited API key is valid |
 
 ## Build Your Own Skills
 
@@ -326,6 +340,7 @@ The server automatically:
 | `PINION_PRIVATE_KEY` | yes | -- | Hex private key (0x...) with USDC on Base |
 | `PINION_API_URL` | no | `https://pinionos.com/skill` | Override the skill API endpoint |
 | `PINION_NETWORK` | no | `base` | Network: `base` or `base-sepolia` |
+| `PINION_API_KEY` | no | -- | Unlimited API key (pk_...) to bypass x402 payments |
 | `ADDRESS` | server only | -- | Wallet address to receive payments |
 | `FACILITATOR_URL` | server only | `https://facilitator.payai.network` | x402 facilitator endpoint |
 | `ANTHROPIC_API_KEY` | chat skill | -- | Anthropic API key for the chat skill |
@@ -346,9 +361,10 @@ pinion-os/
       types.ts           TypeScript interfaces
       x402.ts            EIP-3009 payment signing
       x402-generic.ts    generic x402 caller for any endpoint
+      x402-v2.ts           x402 v2 transport (Stripe) support
     plugin/            Claude MCP server
       server.ts          MCP request handlers
-      tools.ts           tool definitions + dispatch (10 tools)
+      tools.ts           tool definitions + dispatch (12 tools)
       limits.ts          per-session spend limit tracker
       config.ts          env/arg configuration
       index.ts           CLI entry point (npx pinion-os)

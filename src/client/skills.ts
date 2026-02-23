@@ -12,6 +12,8 @@ import type {
     TradeResult,
     FundResult,
     BroadcastResult,
+    UnlimitedResult,
+    UnlimitedVerifyResult,
     SkillResponse,
 } from "./types.js";
 
@@ -139,5 +141,25 @@ export class SkillMethods {
             tx,
             privateKey: key,
         });
+    }
+
+    /**
+     * Purchase unlimited access to all Pinion OS skills for $100 USDC.
+     * Returns an API key to include as X-API-KEY header on future requests.
+     */
+    async unlimited(): Promise<SkillResponse<UnlimitedResult>> {
+        return this.client.request<UnlimitedResult>("POST", "/unlimited");
+    }
+
+    /**
+     * Verify an unlimited API key (free, no x402 payment).
+     * Returns validity status and the associated address.
+     */
+    async unlimitedVerify(key: string): Promise<UnlimitedVerifyResult> {
+        const url = this.client.baseUrl + "/unlimited/verify?key=" + encodeURIComponent(key);
+        const res = await fetch(url, {
+            headers: { Accept: "application/json" },
+        });
+        return res.json() as Promise<UnlimitedVerifyResult>;
     }
 }

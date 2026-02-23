@@ -7,6 +7,8 @@ export interface PinionConfig {
     apiUrl?: string;
     /** network: "base" or "base-sepolia" */
     network?: string;
+    /** unlimited API key (bypasses x402 payments) */
+    apiKey?: string;
 }
 
 export interface PaymentRequirements {
@@ -152,4 +154,22 @@ export interface SpendLimitConfig {
     spent: bigint;
     remaining: bigint;
     callCount: number;
+}
+
+export interface UnlimitedResult {
+    message: string;
+    apiKey: string;
+    address: string;
+    plan: string;
+    price?: string;
+    note?: string;
+    timestamp?: string;
+}
+
+export interface UnlimitedVerifyResult {
+    valid: boolean;
+    address?: string;
+    since?: string;
+    plan?: string;
+    error?: string;
 }

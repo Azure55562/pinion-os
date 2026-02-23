@@ -11,6 +11,7 @@ export class PinionClient {
     private wallet: ethers.Wallet;
     private apiUrl: string;
     private network: string;
+    private _apiKey: string | undefined;
     readonly skills: SkillMethods;
 
     constructor(config: PinionConfig) {
@@ -21,6 +22,7 @@ export class PinionClient {
         this.wallet = new ethers.Wallet(config.privateKey);
         this.apiUrl = (config.apiUrl || PINION_API_URL).replace(/\/$/, "");
         this.network = config.network || "base";
+        this._apiKey = config.apiKey;
         this.skills = new SkillMethods(this);
     }
 
@@ -28,14 +30,25 @@ export class PinionClient {
         return this.wallet.address;
     }
 
+    /** Base URL for the skill server (used by SkillMethods for free endpoints). */
+    get baseUrl(): string {
+        return this.apiUrl;
+    }
+
     /** Access the underlying ethers Wallet (for advanced use like x402 generic calls). */
     get signer(): ethers.Wallet {
         return this.wallet;
     }
 
+    /** Set an unlimited API key for bypassing x402 payments. */
+    setApiKey(key: string): void {
+        this._apiKey = key;
+    }
+
     /**
-     * Make an x402-paid request to a pinion endpoint.
-     * Handles the 402 -> sign -> retry flow automatically.
+     * Make a request to a pinion endpoint.
+     * If an API key is configured, sends it as X-API-KEY (skips x402).
+     * Otherwise handles the 402 -> sign -> retry flow automatically.
      */
     async request<T = any>(
         method: string,
@@ -50,9 +63,27 @@ export class PinionClient {
             Accept: "application/json",
         };
 
+        if (this._apiKey) {
+            headers["X-API-KEY"] = this._apiKey;
+        }
+
         const opts: RequestInit = { method, headers };
         if (body && method === "POST") {
             opts.body = JSON.stringify(body);
+        }
+
+        // with API key: direct request (no x402 flow)
+        if (this._apiKey) {
+            const res = await fetch(url, opts);
+            const data = await res.json().catch(() => ({
+                error: "non-json response",
+            }));
+            return {
+                status: res.status,
+                data,
+                paidAmount: "0",
+                responseTimeMs: Date.now() - start,
+            };
         }
 
         // first request -- expect 402
